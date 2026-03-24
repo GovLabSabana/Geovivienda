@@ -2,7 +2,7 @@ import os
 import json
 import threading
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, send_from_directory
 from extractor_links import extraer_links_fincaraiz
 from extractor_detalles import procesar_lista_links
 
@@ -60,17 +60,10 @@ def serve_geojson(filename):
     """
     Ruta personalizada para saltarse los problemas de mimetypes o codificación de Windows 
     que causan 404 al intentar servir .geojson desde la carpeta static nativamente.
+    Se usa send_from_directory para mayor eficiencia con archivos grandes.
     """
-    ruta_archivo = os.path.join(app.root_path, 'static', 'geo', filename)
-    if not os.path.exists(ruta_archivo):
-        return jsonify({"error": "File not found"}), 404
-        
-    try:
-        with open(ruta_archivo, 'r', encoding='utf-8') as f:
-            contenido = json.load(f)
-        return jsonify(contenido)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    directory = os.path.join(app.root_path, 'static', 'geo')
+    return send_from_directory(directory, filename, mimetype='application/json')
 
 @app.route('/api/delete_row', methods=['POST'])
 def delete_row():
