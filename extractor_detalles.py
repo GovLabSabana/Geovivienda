@@ -15,16 +15,16 @@ import os
 
 def configurar_driver():
     opts = Options()
-    opts.add_argument("--start-maximized")
     opts.add_argument("--headless")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--no-sandbox")
     opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1920,1080")
     opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    opts.page_load_strategy = 'eager' # No esperar a que carguen imágenes y CSS
+    opts.page_load_strategy = 'eager'
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
-    driver.set_page_load_timeout(15) # Máximo 15 segundos de espera por página
+    driver.set_page_load_timeout(15)
     return driver
 
 def extraer_detalles_inmueble(html_source, url_referencia=""):
@@ -74,8 +74,8 @@ def extraer_detalles_inmueble(html_source, url_referencia=""):
                 # Si hay multiples puntos, unimos todos menos el último (ej 1.200.50 -> 1200.50)
                 num_str = ''.join(partes[:-1]) + '.' + partes[-1]
             try:
-                val = float(num_str)
-                return int(val) if val.is_integer() else val
+                # Aproximar (redondear) al entero más cercano como lo pidió el usuario
+                return int(round(float(num_str)))
             except ValueError:
                 return num_str
         return None
@@ -171,11 +171,16 @@ def extraer_detalles_inmueble(html_source, url_referencia=""):
             
     return detalles
 
-def procesar_lista_links(lista_urls, archivo_salida="datos_propiedades.csv"):
+def procesar_lista_links(lista_urls, archivo_salida="datos_propiedades.csv", log_callback=None):
     """
-    Controlador principal: itera sobre una lista de URLs, scrapea y exporta
-    los resultados concatenándolos a un CSV existente y evitando duplicados.
+    Recibe una lista de URLs de propiedades, extrae detalles de cada una y exporta a CSV.
+    log_callback: funcion opcional (msg, level) para reportar progreso en tiempo real.
     """
+    def log(msg, level='info'):
+        print(msg)
+        if log_callback:
+            log_callback(msg, level)
+    
     columnas_ordenadas = [
         "URL", "Codigo_FincaRaiz", "Tipo_Inmueble", "Estado", "Precio_Venta", "Administracion", 
         "Ubicacion", "Estrato", "Area_Metros", "Area_Construida", "Area_Privada", 
@@ -191,47 +196,47 @@ def procesar_lista_links(lista_urls, archivo_salida="datos_propiedades.csv"):
             df_existente = pd.read_csv(archivo_salida, sep=";", decimal=",", encoding="utf-8-sig")
             if "URL" in df_existente.columns:
                 urls_existentes = set(df_existente["URL"].dropna().tolist())
-                print(f"Archivo previo detectado con {len(urls_existentes)} propiedades guardadas.")
+                log(f"Archivo previo detectado con {len(urls_existentes)} propiedades guardadas.", 'info')
         except Exception as e:
-            print(f"No se pudo cargar el archivo existente: {e}")
+            log(f"No se pudo cargar el archivo existente: {e}", 'warn')
             
     # 2. Filtrar los enlaces que ya fueron procesados previamente
     urls_a_procesar = [url for url in lista_urls if url not in urls_existentes]
     
     if not urls_a_procesar:
-        print("La lista de URLs nuevas está vacía o ya fueron procesadas íntegramente. Abortando extracción.")
+        log("Todas las URLs ya fueron procesadas previamente. No hay datos nuevos.", 'warn')
         return df_existente if df_existente is not None else pd.DataFrame(columns=columnas_ordenadas)
         
-    print(f"\nIniciando extracción detallada de {len(urls_a_procesar)} nuevas propiedades...\n")
+    log(f"Iniciando extraccion de {len(urls_a_procesar)} propiedades nuevas...", 'info')
     driver = configurar_driver()
     datos = []
     
     try:
         total = len(urls_a_procesar)
         for i, url in enumerate(urls_a_procesar, 1):
-            print(f"[{i}/{total}] Procesando: {url}")
+            log(f"[{i}/{total}] Procesando: {url}", 'info')
             try:
                 try:
-                    driver.get("about:blank") # Limpiar DOM para evitar heredar datos si falla la red
+                    driver.get("about:blank")
                     driver.get(url)
                 except TimeoutException:
-                    print(f"  Página {url} tardó mucho, intentando parsear lo que cargó...")
+                    log(f"  Pagina tardó mucho, parseando lo cargado...", 'warn')
                     
-                # Espera asíncrona extra para asegurar la renderización JS (React/Next)
                 time.sleep(3.5) 
                 
                 html = driver.page_source
                 detalle = extraer_detalles_inmueble(html, url)
                 datos.append(detalle)
+                log(f"  OK: {detalle.get('Tipo_Inmueble','inmueble')} en {detalle.get('Ubicacion','?')}", 'ok')
                 
             except Exception as e_url:
-                print(f"  Error al procesar la URL {url}: {e_url}")
+                log(f"  Error al procesar {url}: {e_url}", 'error')
                 
             # Retraso amigable antispam
             time.sleep(1.5)
             
     except Exception as e_general:
-        print(f"Error crítico en el módulo de extracción: {e_general}")
+        log(f"Error critico en el modulo de extraccion: {e_general}", 'error')
     finally:
         driver.quit()
         print("\nExtracción finalizada. Cerrando instancia de Chrome.")

@@ -139,9 +139,10 @@ def configurar_driver():
     Configura y retorna el driver de Selenium con opciones básicas.
     """
     opts = Options()
-    opts.add_argument("--start-maximized")
-    # Si en el futuro no quieres ver el navegador abriéndose, descomenta la siguiente línea:
-    # opts.add_argument("--headless")
+    opts.add_argument("--headless")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1920,1080")
     
     driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
