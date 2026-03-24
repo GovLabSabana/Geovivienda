@@ -55,6 +55,23 @@ def get_status():
         'total_logs': len(job_state['log'])
     })
 
+@app.route('/api/geo/<path:filename>')
+def serve_geojson(filename):
+    """
+    Ruta personalizada para saltarse los problemas de mimetypes o codificación de Windows 
+    que causan 404 al intentar servir .geojson desde la carpeta static nativamente.
+    """
+    ruta_archivo = os.path.join(app.root_path, 'static', 'geo', filename)
+    if not os.path.exists(ruta_archivo):
+        return jsonify({"error": "File not found"}), 404
+        
+    try:
+        with open(ruta_archivo, 'r', encoding='utf-8') as f:
+            contenido = json.load(f)
+        return jsonify(contenido)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/delete_row', methods=['POST'])
 def delete_row():
     url = request.json.get('url')

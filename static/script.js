@@ -68,7 +68,7 @@ function initMap() {
     }
 
     // ---- Estratos (polígonos coloreados por ESTRATO) ----
-    fetch('/static/geo/estratos.geojson')
+    fetch('/api/geo/estratos.geojson')
         .then(r => r.json())
         .then(gj => {
             LAYERS.estratos.layer = L.geoJSON(gj, {
@@ -81,7 +81,7 @@ function initMap() {
         }).catch(() => { });
 
     // ---- SITP (azul rey, radio 3) ----
-    fetch('/static/geo/estaciones_sitp.geojson')
+    fetch('/api/geo/estaciones_sitp.geojson')
         .then(r => r.json())
         .then(gj => {
             LAYERS.sitp.layer = L.geoJSON(gj, {
@@ -97,7 +97,7 @@ function initMap() {
         }).catch(() => { });
 
     // ---- TM (rojo oscuro, radio 5) ----
-    fetch('/static/geo/estaciones_tm.geojson')
+    fetch('/api/geo/estaciones_tm.geojson')
         .then(r => r.json())
         .then(gj => {
             LAYERS.tm.layer = L.geoJSON(gj, {
@@ -113,7 +113,7 @@ function initMap() {
         }).catch(() => { });
 
     // ---- Metro (naranja, centroide de MultiPolygon) ----
-    fetch('/static/geo/estaciones_metro.geojson')
+    fetch('/api/geo/estaciones_metro.geojson')
         .then(r => r.json())
         .then(gj => {
             const markers = L.layerGroup();
@@ -138,7 +138,7 @@ function initMap() {
         }).catch(() => { });
 
     // ---- Cable (rojo claro, radio 6) ----
-    fetch('/static/geo/estaciones_cable.geojson')
+    fetch('/api/geo/estaciones_cable.geojson')
         .then(r => r.json())
         .then(gj => {
             LAYERS.cable.layer = L.geoJSON(gj, {
@@ -154,7 +154,7 @@ function initMap() {
         }).catch(() => { });
 
     // ---- Ciclorutas (blanco, línea fina, sin tooltip) ----
-    fetch('/static/geo/cliclorutas.geojson')
+    fetch('/api/geo/cliclorutas.geojson')
         .then(r => r.json())
         .then(gj => {
             LAYERS.ciclorutas.layer = L.geoJSON(gj, {
